@@ -1,0 +1,105 @@
+'Hi my name is David Emanuel Flores Benitez and this is my code for the VBA Challenge
+
+Sub AnalyzeStockData()
+    Dim ws As Worksheet
+    Dim ticker As String
+    Dim openPrice As Double
+    Dim closePrice As Double
+    Dim volume As Double
+    Dim quarterlyChange As Double
+    Dim percentChange As Double
+    Dim lastRow As Long
+    Dim summaryRow As Long
+    Dim firstRow As Long
+    Dim totalVolume As Double
+    Dim i As Long
+
+    ' Loop through each worksheet in the workbook
+    For Each ws In ThisWorkbook.Worksheets
+        ' Add headers for the summary columns
+        ws.Cells(1, 9).Value = "Ticker"
+        ws.Cells(1, 10).Value = "Quarterly Change"
+        ws.Cells(1, 11).Value = "Percent Change"
+        ws.Cells(1, 12).Value = "Total Stock Volume"
+
+        ' Find the last row with data in the worksheet
+        lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        summaryRow = 2
+        firstRow = 2
+        totalVolume = 0
+
+        ' Loop through each row of data in the worksheet
+        For i = 2 To lastRow
+            ticker = ws.Cells(i, 1).Value
+
+            ' Accumulate the volume if it is a numeric value
+            If IsNumeric(ws.Cells(i, 7).Value) Then
+                totalVolume = totalVolume + Val(ws.Cells(i, 7).Value)
+            End If
+
+            ' Check if we have reached a new ticker or the end of the data
+            If ws.Cells(i + 1, 1).Value <> ticker Or i = lastRow Then
+                openPrice = ws.Cells(firstRow, 3).Value
+                closePrice = ws.Cells(i, 6).Value
+                quarterlyChange = closePrice - openPrice
+                If openPrice <> 0 Then
+                    percentChange = (quarterlyChange / openPrice) * 100
+                Else
+                    percentChange = 0
+                End If
+
+                ' Output the results for the current ticker
+                ws.Cells(summaryRow, 9).Value = ticker
+                ws.Cells(summaryRow, 10).Value = quarterlyChange
+                ws.Cells(summaryRow, 11).Value = Round(percentChange, 2) / 100
+                ws.Cells(summaryRow, 12).Value = totalVolume
+
+                ' Format the quarterly change
+                If quarterlyChange >= 0 Then
+                    ws.Cells(summaryRow, 10).Interior.Color = RGB(0, 255, 0)
+                Else
+                    ws.Cells(summaryRow, 10).Interior.Color = RGB(255, 0, 0)
+                End If
+
+                ' Apply percentage format to the percent change column
+                ws.Cells(summaryRow, 11).NumberFormat = "0.00%"
+
+                ' Move to the next summary row
+                summaryRow = summaryRow + 1
+                firstRow = i + 1
+                totalVolume = 0
+            End If
+        Next i
+
+        ' Find the greatest increases, decreases, and volume
+        Dim maxIncrease As Double, maxDecrease As Double, maxVolume As Double
+        Dim maxIncreaseTicker As String, maxDecreaseTicker As String, maxVolumeTicker As String
+
+        ' Calculate the maximum increase, decrease, and volume
+        maxIncrease = Application.WorksheetFunction.Max(ws.Range(ws.Cells(2, 11), ws.Cells(summaryRow - 1, 11)))
+        maxDecrease = Application.WorksheetFunction.Min(ws.Range(ws.Cells(2, 11), ws.Cells(summaryRow - 1, 11)))
+        maxVolume = Application.WorksheetFunction.Max(ws.Range(ws.Cells(2, 12), ws.Cells(summaryRow - 1, 12)))
+
+        ' Identify the tickers with the greatest changes and volume
+        maxIncreaseTicker = ws.Cells(Application.WorksheetFunction.Match(maxIncrease, ws.Range(ws.Cells(2, 11), ws.Cells(summaryRow - 1, 11)), 0) + 1, 9).Value
+        maxDecreaseTicker = ws.Cells(Application.WorksheetFunction.Match(maxDecrease, ws.Range(ws.Cells(2, 11), ws.Cells(summaryRow - 1, 11)), 0) + 1, 9).Value
+        maxVolumeTicker = ws.Cells(Application.WorksheetFunction.Match(maxVolume, ws.Range(ws.Cells(2, 12), ws.Cells(summaryRow - 1, 12)), 0) + 1, 9).Value
+
+        ' Output the results for the greatest changes and volume
+        ws.Cells(1, 14).Value = "Greatest % Increase"
+        ws.Cells(1, 15).Value = maxIncreaseTicker
+        ws.Cells(1, 16).Value = Round(maxIncrease, 2) & "%"
+
+        ws.Cells(2, 14).Value = "Greatest % Decrease"
+        ws.Cells(2, 15).Value = maxDecreaseTicker
+        ws.Cells(2, 16).Value = Round(maxDecrease, 2) & "%"
+
+        ws.Cells(3, 14).Value = "Greatest Total Volume"
+        ws.Cells(3, 15).Value = maxVolumeTicker
+        ws.Cells(3, 16).Value = maxVolume
+
+    Next ws
+
+    ' Display a message when the analysis is complete
+    MsgBox "Analysis complete!"
+End Sub
